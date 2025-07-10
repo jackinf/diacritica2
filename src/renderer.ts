@@ -1,8 +1,11 @@
 // Type definitions for the electron API
-
 interface ElectronAPI {
     processFile: (filePath: string) => Promise<{ success: boolean; message: string }>;
     selectFile: () => Promise<string | null>;
+    openConfig: () => Promise<{ success: boolean; message?: string }>;
+    getMappings: () => Promise<{ [key: string]: string }>;
+    updateMapping: (oldChar: string, newChar: string) => Promise<{ success: boolean; message?: string }>;
+    deleteMapping: (char: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 // @ts-ignore
@@ -18,6 +21,8 @@ class DiacriticsRemoverApp {
     private selectedFileLabel: HTMLElement;
     private fixButton: HTMLButtonElement;
     private browseButton: HTMLButtonElement;
+    private configButton: HTMLButtonElement;
+    private settingsButton: HTMLElement;
     private currentFile: string | null = null;
 
     constructor() {
@@ -26,6 +31,8 @@ class DiacriticsRemoverApp {
         this.selectedFileLabel = document.getElementById('selectedFileLabel')!;
         this.fixButton = document.getElementById('fixButton') as HTMLButtonElement;
         this.browseButton = document.getElementById('browseButton') as HTMLButtonElement;
+        this.configButton = document.getElementById('configButton') as HTMLButtonElement;
+        this.settingsButton = document.getElementById('settingsButton')!;
 
         this.setupEventListeners();
     }
@@ -40,6 +47,8 @@ class DiacriticsRemoverApp {
         // Button events
         this.browseButton.addEventListener('click', this.handleBrowse.bind(this));
         this.fixButton.addEventListener('click', this.handleFix.bind(this));
+        this.configButton.addEventListener('click', this.handleOpenConfig.bind(this));
+        this.settingsButton.addEventListener('click', this.handleOpenSettings.bind(this));
     }
 
     private handleDragOver(e: DragEvent): void {
@@ -105,6 +114,91 @@ class DiacriticsRemoverApp {
         }
     }
 
+    private async handleOpenConfig(): Promise<void> {
+        try {
+            // @ts-ignore
+            const result = await window.electronAPI.openConfig();
+            if (!result.success) {
+                this.showError(result.message || 'Failed to open config file');
+            }
+        } catch (error) {
+            this.showError(`Error opening config: ${error}`);
+        }
+    }
+
+    private async handleOpenSettings(): Promise<void> {
+        const modal = document.getElementById('settingsModal')!;
+        modal.style.display = 'flex';
+        await this.loadMappings();
+    }
+
+    private async loadMappings(): Promise<void> {
+        try {
+            // @ts-ignore
+            const mappings = await window.electronAPI.getMappings();
+            const container = document.getElementById('mappingsContainer')!;
+            container.innerHTML = '';
+
+            Object.entries(mappings).forEach(([char, replacement]) => {
+                const item = this.createMappingItem(char, replacement as string);
+                container.appendChild(item);
+            });
+        } catch (error) {
+            console.error('Error loading mappings:', error);
+        }
+    }
+
+    private createMappingItem(char: string, replacement: string): HTMLElement {
+        const item = document.createElement('div');
+        item.className = 'mapping-item';
+        item.innerHTML = `
+            <span class="char-display">${this.escapeHtml(char)}</span>
+            <span class="arrow">→</span>
+            <input type="text" class="replacement-input" value="${this.escapeHtml(replacement)}" data-char="${this.escapeHtml(char)}">
+            <button class="delete-button" data-char="${this.escapeHtml(char)}">Delete</button>
+        `;
+
+        const input = item.querySelector('.replacement-input') as HTMLInputElement;
+        const deleteBtn = item.querySelector('.delete-button') as HTMLButtonElement;
+
+        input.addEventListener('change', async (e) => {
+            const target = e.target as HTMLInputElement;
+            const originalChar = target.getAttribute('data-char')!;
+            const newValue = target.value;
+
+            try {
+                // @ts-ignore
+                const result = await window.electronAPI.updateMapping(originalChar, newValue);
+                if (!result.success) {
+                    this.showError(result.message || 'Failed to update mapping');
+                    target.value = replacement; // Revert on error
+                }
+            } catch (error) {
+                this.showError(`Error updating mapping: ${error}`);
+                target.value = replacement; // Revert on error
+            }
+        });
+
+        deleteBtn.addEventListener('click', async () => {
+            const charToDelete = deleteBtn.getAttribute('data-char')!;
+            if (confirm(`Delete mapping for "${charToDelete}"?`)) {
+                try {
+                    // @ts-ignore
+                    const result = await window.electronAPI.deleteMapping(charToDelete);
+                    if (result.success) {
+                        item.remove();
+                    } else {
+                        this.showError(result.message || 'Failed to delete mapping');
+                    }
+                } catch (error) {
+                    this.showError(`Error deleting mapping: ${error}`);
+                }
+            }
+        });
+
+        return item;
+    }
+
     private setSelectedFile(filePath: string): void {
         this.currentFile = filePath;
         const fileName = filePath.split(/[\\/]/).pop() || '';
@@ -124,6 +218,12 @@ class DiacriticsRemoverApp {
         const validExtensions = ['.xlsx', '.xlsm', '.xls'];
         const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'));
         return validExtensions.includes(ext);
+    }
+
+    private escapeHtml(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     private showSuccess(message: string): void {
@@ -156,5 +256,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal close button
     document.getElementById('modalClose')?.addEventListener('click', () => {
         document.getElementById('modal')!.style.display = 'none';
+    });
+
+    // Settings modal close button
+    document.getElementById('closeSettings')?.addEventListener('click', () => {
+        document.getElementById('settingsModal')!.style.display = 'none';
+    });
+
+    // Add new mapping functionality
+    const addButton = document.getElementById('addButton');
+    const newCharInput = document.getElementById('newChar') as HTMLInputElement;
+    const newReplacementInput = document.getElementById('newReplacement') as HTMLInputElement;
+
+    addButton?.addEventListener('click', async () => {
+        const char = newCharInput.value.trim();
+        const replacement = newReplacementInput.value.trim();
+
+        if (!char) {
+            alert('Please enter a character to map');
+            return;
+        }
+
+        try {
+            // @ts-ignore
+            const result = await window.electronAPI.updateMapping(char, replacement);
+            if (result.success) {
+                // Reload mappings
+                const app = new DiacriticsRemoverApp();
+                await app['loadMappings']();
+                
+                // Clear inputs
+                newCharInput.value = '';
+                newReplacementInput.value = '';
+            } else {
+                alert(result.message || 'Failed to add mapping');
+            }
+        } catch (error) {
+            alert(`Error adding mapping: ${error}`);
+        }
     });
 });

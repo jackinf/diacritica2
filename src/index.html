@@ -30,11 +30,35 @@
             width: 100%;
         }
 
-        h1 {
-            text-align: center;
-            color: #333;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
             font-size: 24px;
+        }
+
+        .settings-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .settings-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .settings-button svg {
+            width: 24px;
+            height: 24px;
+            fill: #666;
         }
 
         .drop-zone {
@@ -90,7 +114,13 @@
             color: #666;
         }
 
-        .fix-button {
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .fix-button, .config-button, .analyze-button {
             background-color: #4a90e2;
             color: white;
             border: none;
@@ -100,15 +130,27 @@
             font-size: 16px;
             font-weight: bold;
             transition: all 0.2s ease;
-            margin: 0 auto;
-            display: block;
         }
 
-        .fix-button:hover:not(:disabled) {
-            background-color: #357abd;
+        .config-button {
+            background-color: #6c757d;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: normal;
         }
 
-        .fix-button:disabled {
+        .analyze-button {
+            background-color: #17a2b8;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+
+        .fix-button:hover:not(:disabled), .config-button:hover, .analyze-button:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .fix-button:disabled, .analyze-button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
         }
@@ -172,11 +214,155 @@
         .modal-button:hover {
             background-color: #357abd;
         }
+
+        /* Settings modal styles */
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+            max-height: 80vh;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .close-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .mappings-container {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .mapping-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            gap: 10px;
+        }
+
+        .mapping-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .char-display {
+            font-size: 18px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .arrow {
+            color: #666;
+        }
+
+        .replacement-input {
+            flex: 1;
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .delete-button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+
+        .add-mapping {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-top: 2px solid #eee;
+        }
+
+        .add-input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .add-button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .add-button:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Excel Diacritics Remover</h1>
+    <div class="header">
+        <h1>Excel Diacritics Remover</h1>
+        <button id="settingsButton" class="settings-button" title="Settings">
+            <svg viewBox="0 0 24 24">
+                <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+            </svg>
+        </button>
+    </div>
 
     <div id="dropZone" class="drop-zone">
         <div id="fileLabel" class="file-label">
@@ -187,15 +373,38 @@
 
     <div id="selectedFileLabel" class="selected-file">No file selected</div>
 
-    <button id="fixButton" class="fix-button" disabled>Fix</button>
+    <div class="action-buttons">
+        <button id="fixButton" class="fix-button" disabled>Fix</button>
+        <!-- <button id="analyzeButton" class="analyze-button" disabled>Analyze</button> -->
+        <button id="configButton" class="config-button">Open Config File</button>
+    </div>
 </div>
 
-<!-- Modal -->
+<!-- Success/Error Modal -->
 <div id="modal" class="modal">
     <div class="modal-content">
         <h2 id="modalTitle" class="modal-title"></h2>
         <p id="modalMessage" class="modal-message"></p>
         <button id="modalClose" class="modal-button">OK</button>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="settings-modal">
+    <div class="settings-content">
+        <div class="settings-header">
+            <h2 class="settings-title">Character Mappings</h2>
+            <button id="closeSettings" class="close-button">×</button>
+        </div>
+        <div id="mappingsContainer" class="mappings-container">
+            <!-- Mappings will be populated here -->
+        </div>
+        <div class="add-mapping">
+            <input type="text" id="newChar" class="add-input" placeholder="Character" maxlength="5">
+            <span class="arrow">→</span>
+            <input type="text" id="newReplacement" class="add-input" placeholder="Replacement" maxlength="10">
+            <button id="addButton" class="add-button">Add Mapping</button>
+        </div>
     </div>
 </div>
 

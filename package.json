@@ -1,10 +1,10 @@
 {
   "name": "excel-diacritics-remover",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "Remove diacritics from Excel files",
   "main": "dist/main.js",
   "scripts": {
-    "start": "npm run build && electron .",
+    "start": "npm run build && node -e \"require('fs').copyFileSync('src/index.html', 'dist/index.html')\" && electron .",
     "build": "tsc",
     "watch": "tsc -w",
     "dist": "npm run build && electron-builder",
